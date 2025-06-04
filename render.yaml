@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: spring-boot-crud-api
+    env: docker
+    plan: free
+    healthCheckPath: /api/products
+    envVars:
+      - key: SPRING_DATASOURCE_URL
+        value: jdbc:mysql://{{MYSQL_DB_HOST}}:3306/{{MYSQL_DB_NAME}}
+      - key: SPRING_DATASOURCE_USERNAME
+        sync: false  # This means you'll set it in Render dashboard
+      - key: SPRING_DATASOURCE_PASSWORD
+        sync: false  # This means you'll set it in Render dashboard
+      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
+        value: update
+
+  - type: pserv
+    name: mysql-database
+    env: docker
+    repo: https://github.com/render-examples/mysql
+    envVars:
+      - key: MYSQL_DATABASE
+        value: demo
+      - key: MYSQL_ROOT_PASSWORD
+        sync: false  # This means you'll set it in Render dashboard
+      - key: MYSQL_USER
+        sync: false  # This means you'll set it in Render dashboard
+      - key: MYSQL_PASSWORD
+        sync: false  # This means you'll set it in Render dashboard
+
