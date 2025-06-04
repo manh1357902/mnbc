@@ -1,3 +1,4 @@
+# ---------- Build Spring Boot app ----------
 FROM eclipse-temurin:17-jdk-alpine as build
 WORKDIR /workspace/app
 
@@ -9,44 +10,47 @@ COPY src src
 RUN chmod +x mvnw
 RUN ./mvnw install -DskipTests
 
-# Final image with both MySQL and Spring Boot app
-FROM eclipse-temurin:17-jre-alpine
+# ---------- Final image ----------
+FROM alpine:3.18
 
-# Install MySQL
-RUN apk update && apk add --no-cache mysql mysql-client bash
+# Install OpenJDK, MySQL, bash
+RUN apk update && \
+    apk add --no-cache openjdk17 mysql mysql-client bash
 
-# Configure MySQL
-ENV MYSQL_DATABASE=demo
-ENV MYSQL_ROOT_PASSWORD=root
-ENV MYSQL_USER=user
-ENV MYSQL_PASSWORD=password
+# Environment variables for MySQL
+ENV MYSQL_DATABASE=demo \
+    MYSQL_ROOT_PASSWORD=root \
+    MYSQL_USER=user \
+    MYSQL_PASSWORD=password
 
-# Copy the MySQL initialization script
 WORKDIR /app
+
+# Copy app jar
 COPY --from=build /workspace/app/target/*.jar app.jar
 
-# Create startup script to run both MySQL and Spring Boot app
-RUN echo '#!/bin/sh \n\
-echo "Starting MySQL..." \n\
-mkdir -p /run/mysqld \n\
-chown -R mysql:mysql /run/mysqld \n\
-mysql_install_db --user=mysql --datadir=/var/lib/mysql \n\
-mysqld --user=mysql --datadir=/var/lib/mysql --init-file=/app/init.sql & \n\
-sleep 10 \n\
-echo "MySQL started. Starting Spring Boot application..." \n\
-java -jar /app/app.jar \n\
-' > /app/startup.sh
+# Create MySQL init script
+RUN echo "\
+CREATE DATABASE IF NOT EXISTS demo;\n\
+ALTER USER 'root'@'localhost' IDENTIFIED BY 'root';\n\
+GRANT ALL ON *.* TO 'root'@'localhost' WITH GRANT OPTION;\n\
+CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'password';\n\
+GRANT ALL ON demo.* TO 'user'@'%';\n\
+FLUSH PRIVILEGES;\n\
+" > /app/init.sql
 
-# Create MySQL initialization SQL
-RUN echo "CREATE DATABASE IF NOT EXISTS demo; \n\
-ALTER USER 'root'@'localhost' IDENTIFIED BY 'root'; \n\
-GRANT ALL ON *.* TO 'root'@'localhost'; \n\
-CREATE USER IF NOT EXISTS 'user'@'%' IDENTIFIED BY 'password'; \n\
-GRANT ALL ON demo.* TO 'user'@'%'; \n\
-FLUSH PRIVILEGES;" > /app/init.sql
-
-RUN chmod +x /app/startup.sh
+# Create startup script
+RUN echo "\
+#!/bin/sh\n\
+echo 'Initializing MySQL...'\n\
+mkdir -p /run/mysqld\n\
+chown -R mysql:mysql /run/mysqld\n\
+mysql_install_db --user=mysql --datadir=/var/lib/mysql\n\
+mysqld --user=mysql --init-file=/app/init.sql &\n\
+echo 'Waiting for MySQL to start...'\n\
+sleep 10\n\
+echo 'Starting Spring Boot app...'\n\
+java -jar /app/app.jar\n\
+" > /app/start.sh && chmod +x /app/start.sh
 
 EXPOSE 8080 3306
-
-CMD ["/app/startup.sh"]
+CMD ["/app/start.sh"]
