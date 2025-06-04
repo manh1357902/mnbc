@@ -10,29 +10,3 @@ services:
     # - Docker Command: Không cần điền (sử dụng mặc định từ Dockerfile)
     # - Auto-Deploy: Bật nếu muốn tự động deploy khi có commit mới
     # - Preview Environment: Tắt nếu không cần môi trường preview
-    envVars:
-      - key: SPRING_DATASOURCE_URL
-        value: jdbc:mysql://{{MYSQL_DB_HOST}}:3306/{{MYSQL_DB_NAME}}
-      - key: SPRING_DATASOURCE_USERNAME
-        sync: false  # Nhập giống với MYSQL_USER bên dưới
-      - key: SPRING_DATASOURCE_PASSWORD
-        sync: false  # Nhập giống với MYSQL_PASSWORD bên dưới
-      - key: SPRING_JPA_HIBERNATE_DDL_AUTO
-        value: update
-
-  - type: pserv
-    name: mysql-database
-    env: docker
-    repo: https://github.com/render-examples/mysql
-    # Phần Advanced Settings:
-    # - Disk Size: 1 GB (mặc định) hoặc lớn hơn nếu cần
-    # - Instance Type: Chọn free hoặc paid tùy nhu cầu
-    envVars:
-      - key: MYSQL_DATABASE
-        value: demo
-      - key: MYSQL_ROOT_PASSWORD
-        sync: false  # Nhập mật khẩu root cho MySQL (tự đặt)
-      - key: MYSQL_USER
-        sync: false  # Nhập username cho MySQL (tự đặt, ví dụ: myuser)
-      - key: MYSQL_PASSWORD
-        sync: false  # Nhập mật khẩu cho user MySQL (tự đặt)
